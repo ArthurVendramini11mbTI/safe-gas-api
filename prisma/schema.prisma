@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ValveState {
+  OPEN
+  CLOSED
+  UNKNOWN
+}
+
+enum ValveAction {
+  OPEN
+  CLOSE
+  RESET_SAFETY
+}
+
+enum CommandStatus {
+  PENDING
+  APPLIED
+  REJECTED
+  FAILED
+  EXPIRED
+}
+
+model SystemSettings {
+  id                  Int      @id @default(1)
+  tareKg              Float    @default(0)
+  capacityKg          Float    @default(13)
+  noiseToleranceKg    Float    @default(0.05)
+  refillThresholdKg   Float    @default(0.5)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model SystemState {
+  id                  Int        @id @default(1)
+  deviceId            String     @default("esp1")
+  deviceOnline        Boolean    @default(false)
+  esp2Online          Boolean    @default(false)
+  lastSeenAt          DateTime?
+  valveState          ValveState @default(UNKNOWN)
+  leakActive          Boolean    @default(false)
+  mq2Raw              Int?
+  totalWeightKg       Float?
+  gasKg               Float?
+  gasPercentage       Float?
+  updatedAt           DateTime   @updatedAt
+
+  @@map("system_state")
+}
+
+model TelemetryReading {
+  id                  BigInt     @id @default(autoincrement())
+  deviceId            String
+  receivedAt          DateTime   @default(now())
+  totalWeightKg       Float
+  gasKg               Float
+  gasPercentage       Float
+  mq2Raw              Int
+  leakActive          Boolean
+  valveState          ValveState
+  esp2Online          Boolean
+
+  @@index([receivedAt])
+  @@map("telemetry_readings")
+}
+
+model LeakEvent {
+  id                  String    @id @default(uuid()) @db.Uuid
+  startedAt           DateTime  @default(now())
+  endedAt             DateTime?
+  acknowledgedAt      DateTime?
+  peakMq2Raw          Int
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  commands            ValveCommand[]
+
+  @@index([startedAt])
+  @@map("leak_events")
+}
+
+model ValveCommand {
+  id                  String        @id @default(uuid()) @db.Uuid
+  action              ValveAction
+  status              CommandStatus @default(PENDING)
+  reason              String?
+  requestedAt         DateTime      @default(now())
+  completedAt         DateTime?
+  reportedValveState  ValveState?
+  leakEventId         String?       @db.Uuid
+  leakEvent           LeakEvent?    @relation(fields: [leakEventId], references: [id])
+
+  @@index([requestedAt])
+  @@index([status])
+  @@map("valve_commands")
+}

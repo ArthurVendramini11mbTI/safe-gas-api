@@ -1,0 +1,35 @@
+import type { FastifyInstance } from "fastify";
+import type { LeakController } from "../controllers/leak.controller.js";
+import type { StatusController } from "../controllers/status.controller.js";
+import type { TelemetryController } from "../controllers/telemetry.controller.js";
+import type { ValveController } from "../controllers/valve.controller.js";
+import type { SimulationController } from "../controllers/simulation.controller.js";
+
+interface Controllers {
+  status: StatusController;
+  telemetry: TelemetryController;
+  leak: LeakController;
+  valve: ValveController;
+  simulation: SimulationController;
+}
+
+export async function apiRoutes(app: FastifyInstance, controllers: Controllers) {
+  app.get("/status", { schema: { tags: ["Sistema"], summary: "Situação atual da central" } }, controllers.status.get);
+  app.get("/settings", { schema: { tags: ["Sistema"], summary: "Configuração da balança" } }, controllers.status.getSettings);
+  app.put("/settings", { schema: { tags: ["Sistema"], summary: "Atualiza tara e capacidade" } }, controllers.status.updateSettings);
+
+  app.get("/gas/current", { schema: { tags: ["Gás"], summary: "Quantidade atual de gás" } }, controllers.telemetry.current);
+  app.get("/gas/history", { schema: { tags: ["Gás"], summary: "Histórico de telemetria" } }, controllers.telemetry.history);
+  app.get("/gas/consumption", { schema: { tags: ["Gás"], summary: "Consumo diário, semanal ou mensal" } }, controllers.telemetry.consumption);
+
+  app.get("/leaks", { schema: { tags: ["Vazamentos"], summary: "Histórico de vazamentos" } }, controllers.leak.history);
+  app.post("/leaks/:id/acknowledge", { schema: { tags: ["Vazamentos"], summary: "Reconhece um alerta encerrado" } }, controllers.leak.acknowledge);
+
+  app.post("/valve/commands", { schema: { tags: ["Válvula"], summary: "Solicita abertura ou fechamento" } }, controllers.valve.command);
+  app.get("/valve/commands", { schema: { tags: ["Válvula"], summary: "Histórico de comandos" } }, controllers.valve.history);
+
+  app.get("/simulation/status", { schema: { tags: ["Simulação"], summary: "Estado da simulação" } }, controllers.simulation.status);
+  app.post("/simulation/start", { schema: { tags: ["Simulação"], summary: "Inicia a simulação" } }, controllers.simulation.start);
+  app.post("/simulation/stop", { schema: { tags: ["Simulação"], summary: "Encerra a simulação" } }, controllers.simulation.stop);
+  app.post("/simulation/state", { schema: { tags: ["Simulação"], summary: "Atualiza peso ou vazamento simulado" } }, controllers.simulation.updateState);
+}
