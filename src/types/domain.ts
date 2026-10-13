@@ -5,6 +5,11 @@ export type CommandStatus = "PENDING" | "APPLIED" | "REJECTED" | "FAILED" | "EXP
 export interface GasSettings {
   tareKg: number;
   capacityKg: number;
+  initialGasKg?: number | null;
+  cylinderId?: number;
+  cylinderNumber?: number;
+  initialWeightKg?: number | null;
+  installedAt?: Date | string;
   noiseToleranceKg: number;
   refillThresholdKg: number;
 }

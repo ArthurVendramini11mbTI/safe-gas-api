@@ -9,6 +9,7 @@ import { prisma } from "./lib/prisma.js";
 import { createSocketServer } from "./lib/socket.js";
 import { MqttGateway } from "./lib/mqtt.js";
 import { CommandRepository } from "./repository/command.repository.js";
+import { CylinderRepository } from "./repository/cylinder.repository.js";
 import { LeakRepository } from "./repository/leak.repository.js";
 import { SettingsRepository } from "./repository/settings.repository.js";
 import { StateRepository } from "./repository/state.repository.js";
@@ -23,6 +24,7 @@ import { StatusController } from "./controllers/status.controller.js";
 import { TelemetryController } from "./controllers/telemetry.controller.js";
 import { ValveController } from "./controllers/valve.controller.js";
 import { SimulationController } from "./controllers/simulation.controller.js";
+import { CylinderController } from "./controllers/cylinder.controller.js";
 import { apiRoutes } from "./routes/api.routes.js";
 
 export async function buildApp() {
@@ -38,9 +40,10 @@ export async function buildApp() {
   const telemetryRepository = new TelemetryRepository();
   const leakRepository = new LeakRepository();
   const commandRepository = new CommandRepository();
+  const cylinderRepository = new CylinderRepository();
 
-  const telemetryService = new TelemetryService(settingsRepository, stateRepository, telemetryRepository, leakRepository, io);
-  const commandService = new CommandService(commandRepository, stateRepository, leakRepository, mqttGateway, io);
+  const telemetryService = new TelemetryService(settingsRepository, stateRepository, telemetryRepository, leakRepository, io, cylinderRepository);
+  const commandService = new CommandService(commandRepository, stateRepository, leakRepository, mqttGateway, io, cylinderRepository);
   const connectivityService = new ConnectivityService(stateRepository, io);
   const simulationService = new SimulationService(
     settingsRepository,
@@ -50,6 +53,7 @@ export async function buildApp() {
     commandRepository,
     telemetryService,
     io,
+    cylinderRepository,
   );
   commandService.setSimulationStatusProvider(() => simulationService.getStatus().active);
   const queryService = new QueryService(
@@ -59,6 +63,7 @@ export async function buildApp() {
     leakRepository,
     commandRepository,
     () => simulationService.getStatus(),
+    cylinderRepository,
   );
 
   mqttGateway.setHandlers({
@@ -73,6 +78,7 @@ export async function buildApp() {
     leak: new LeakController(queryService, commandService),
     valve: new ValveController(commandService, queryService),
     simulation: new SimulationController(simulationService),
+    cylinder: new CylinderController(cylinderRepository),
   };
 
   app.get("/health", async (_request, reply) => {

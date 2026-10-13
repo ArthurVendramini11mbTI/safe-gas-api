@@ -5,6 +5,7 @@ import { SettingsRepository } from "../repository/settings.repository.js";
 import { StateRepository } from "../repository/state.repository.js";
 import { TelemetryRepository } from "../repository/telemetry.repository.js";
 import { calculateGas } from "./gas.service.js";
+import { CylinderRepository } from "../repository/cylinder.repository.js";
 
 export class TelemetryService {
   constructor(
@@ -13,22 +14,24 @@ export class TelemetryService {
     private readonly telemetryRepository: TelemetryRepository,
     private readonly leakRepository: LeakRepository,
     private readonly io: SocketServer,
+    private readonly cylinderRepository: CylinderRepository,
   ) {}
 
   async process(input: TelemetryInput) {
     const settings = await this.settingsRepository.get();
     const calculated = calculateGas(input.totalWeightKg, settings);
+    const cylinderId = await this.cylinderRepository.ensureActive();
     const previousState = await this.stateRepository.get();
     // schemaVersion pertence somente ao envelope MQTT e nao e uma coluna do banco.
     const { schemaVersion: _schemaVersion, ...telemetry } = input;
 
-    const reading = await this.telemetryRepository.create({ ...telemetry, ...calculated });
+    const reading = await this.telemetryRepository.create({ ...telemetry, ...calculated, cylinderId });
     const state = await this.stateRepository.updateTelemetry({ ...telemetry, ...calculated });
 
     const openLeak = await this.leakRepository.findOpen();
     if (input.leakActive) {
       if (!openLeak) {
-        const leak = await this.leakRepository.create(input.mq2Raw);
+        const leak = await this.leakRepository.create(input.mq2Raw, cylinderId);
         this.io.emit("leak.started", leak);
       } else if (input.mq2Raw > openLeak.peakMq2Raw) {
         await this.leakRepository.updatePeak(openLeak.id, input.mq2Raw);

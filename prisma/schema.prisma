@@ -29,8 +29,6 @@ enum CommandStatus {
 
 model SystemSettings {
   id                  Int      @id @default(1)
-  tareKg              Float    @default(0)
-  capacityKg          Float    @default(13)
   noiseToleranceKg    Float    @default(0.05)
   refillThresholdKg   Float    @default(0.5)
   createdAt           DateTime @default(now())
@@ -52,6 +50,8 @@ model SystemState {
   gasKg               Float?
   gasPercentage       Float?
   updatedAt           DateTime   @updatedAt
+  activeCylinderId    Int        @default(1)
+  activeCylinder      GasCylinder @relation(fields: [activeCylinderId], references: [id])
 
   @@map("system_state")
 }
@@ -67,6 +67,8 @@ model TelemetryReading {
   leakActive          Boolean
   valveState          ValveState
   esp2Online          Boolean
+  cylinderId          Int      @default(1)
+  cylinder           GasCylinder @relation(fields: [cylinderId], references: [id])
 
   @@index([receivedAt])
   @@map("telemetry_readings")
@@ -80,6 +82,8 @@ model LeakEvent {
   peakMq2Raw          Int
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+  cylinderId          Int       @default(1)
+  cylinder           GasCylinder @relation(fields: [cylinderId], references: [id])
   commands            ValveCommand[]
 
   @@index([startedAt])
@@ -96,8 +100,29 @@ model ValveCommand {
   reportedValveState  ValveState?
   leakEventId         String?       @db.Uuid
   leakEvent           LeakEvent?    @relation(fields: [leakEventId], references: [id])
+  cylinderId          Int           @default(1)
+  cylinder            GasCylinder   @relation(fields: [cylinderId], references: [id])
 
   @@index([requestedAt])
   @@index([status])
   @@map("valve_commands")
+}
+
+model GasCylinder {
+  id                Int                @id @default(autoincrement())
+  number            Int                @unique
+  installedAt       DateTime           @default(now())
+  removedAt         DateTime?
+  initialWeightKg   Float?
+  initialGasKg      Float?
+  tareKg            Float              @default(0)
+  capacityKg        Float              @default(13)
+  finalWeightKg     Float?
+  createdAt         DateTime           @default(now())
+  state             SystemState[]
+  telemetry         TelemetryReading[]
+  leaks             LeakEvent[]
+  commands          ValveCommand[]
+
+  @@map("gas_cylinders")
 }

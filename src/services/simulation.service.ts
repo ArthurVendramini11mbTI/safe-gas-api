@@ -8,6 +8,7 @@ import { StateRepository } from "../repository/state.repository.js";
 import { TelemetryRepository } from "../repository/telemetry.repository.js";
 import { TelemetryService } from "./telemetry.service.js";
 import type { SimulationStateInput } from "../schemas/simulation.schema.js";
+import { CylinderRepository } from "../repository/cylinder.repository.js";
 
 export class SimulationService {
   private timer: NodeJS.Timeout | undefined;
@@ -25,6 +26,7 @@ export class SimulationService {
     private readonly commandRepository: CommandRepository,
     private readonly telemetryService: TelemetryService,
     private readonly io: SocketServer,
+    private readonly cylinderRepository: CylinderRepository,
   ) {}
 
   getStatus() {
@@ -103,7 +105,8 @@ export class SimulationService {
       const endedAt = new Date(startedAt.getTime() + window.length * readingIntervalMs);
       historicalLeaks.push({ peakMq2Raw: window.peak, startedAt, endedAt, acknowledgedAt: new Date(endedAt.getTime() + readingIntervalMs) });
     }
-    for (const leak of historicalLeaks) await this.leakRepository.createHistorical(leak);
+    const cylinderId = await this.cylinderRepository.ensureActive();
+    for (const leak of historicalLeaks) await this.leakRepository.createHistorical({ ...leak, cylinderId });
 
     for (let index = 0; index <= totalReadings; index += 1) {
       const receivedAt = new Date(now - (totalReadings - index) * readingIntervalMs);
@@ -120,6 +123,7 @@ export class SimulationService {
         leakActive: Boolean(leak),
         valveState: leak ? "CLOSED" : index % 17 === 0 ? "OPEN" : "CLOSED",
         esp2Online: true,
+        cylinderId,
       });
     }
 
@@ -132,6 +136,7 @@ export class SimulationService {
         requestedAt,
         completedAt,
         reportedValveState: index % 14 === 0 ? "OPEN" : "CLOSED",
+        cylinderId,
       });
     }
   }

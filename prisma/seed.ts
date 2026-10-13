@@ -7,14 +7,19 @@ if (!connectionString) throw new Error("DATABASE_URL do Supabase não foi config
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 async function main() {
-  const settings = await prisma.systemSettings.upsert({
+  await prisma.systemSettings.upsert({
     where: { id: 1 },
-    create: { id: 1, tareKg: 12, capacityKg: 13 },
+    create: { id: 1 },
+    update: {},
+  });
+  const cylinder = await prisma.gasCylinder.upsert({
+    where: { number: 1 },
+    create: { number: 1, tareKg: 12, capacityKg: 13, initialGasKg: 13, initialWeightKg: 25 },
     update: {},
   });
   await prisma.systemState.upsert({
     where: { id: 1 },
-    create: { id: 1, deviceId: "esp1", valveState: "CLOSED" },
+    create: { id: 1, deviceId: "esp1", valveState: "CLOSED", activeCylinderId: cylinder.id },
     update: {},
   });
 
@@ -25,13 +30,14 @@ async function main() {
       return {
         deviceId: "esp1",
         receivedAt: new Date(now - (42 - index) * 4 * 60 * 60 * 1000),
-        totalWeightKg: settings.tareKg + gasKg,
+        totalWeightKg: cylinder.tareKg + gasKg,
         gasKg,
-        gasPercentage: (gasKg / settings.capacityKg) * 100,
+        gasPercentage: (gasKg / cylinder.capacityKg) * 100,
         mq2Raw: 170 + (index % 4) * 3,
         leakActive: false,
         valveState: "CLOSED" as const,
         esp2Online: true,
+        cylinderId: cylinder.id,
       };
     });
     await prisma.telemetryReading.createMany({ data: samples });
@@ -45,6 +51,7 @@ async function main() {
         endedAt: new Date(startedAt.getTime() + 75_000),
         acknowledgedAt: new Date(startedAt.getTime() + 100_000),
         peakMq2Raw: 720,
+        cylinderId: cylinder.id,
       },
     });
   }

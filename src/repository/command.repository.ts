@@ -2,9 +2,9 @@ import { prisma } from "../lib/prisma.js";
 import type { CommandStatus, ValveAction, ValveState } from "../types/domain.js";
 
 export class CommandRepository {
-  create(action: ValveAction, leakEventId?: string) {
+  create(action: ValveAction, leakEventId?: string, cylinderId = 1) {
     return prisma.valveCommand.create({
-      data: { action, ...(leakEventId ? { leakEventId } : {}) },
+      data: { action, cylinderId, ...(leakEventId ? { leakEventId } : {}) },
     });
   }
 
@@ -15,8 +15,9 @@ export class CommandRepository {
     completedAt: Date;
     reportedValveState: ValveState;
     reason?: string;
+    cylinderId?: number;
   }) {
-    return prisma.valveCommand.create({ data });
+    return prisma.valveCommand.create({ data: { ...data, cylinderId: data.cylinderId ?? 1 } });
   }
 
   findById(id: string) {
@@ -58,7 +59,7 @@ export class CommandRepository {
     }));
   }
 
-  list(limit: number) {
-    return prisma.valveCommand.findMany({ orderBy: { requestedAt: "desc" }, take: limit });
+  list(limit: number, cylinderId?: number) {
+    return prisma.valveCommand.findMany({ where: cylinderId ? { cylinderId } : {}, orderBy: { requestedAt: "desc" }, take: limit });
   }
 }

@@ -7,6 +7,7 @@ import { TelemetryRepository } from "../repository/telemetry.repository.js";
 import type { GasSettings } from "../types/domain.js";
 import { calculateConsumption } from "./gas.service.js";
 import { calculateGas } from "./gas.service.js";
+import { CylinderRepository } from "../repository/cylinder.repository.js";
 
 export class QueryService {
   constructor(
@@ -16,6 +17,7 @@ export class QueryService {
     private readonly leakRepository: LeakRepository,
     private readonly commandRepository: CommandRepository,
     private readonly simulationStatus: () => unknown = () => ({ active: false }),
+    private readonly cylinderRepository: CylinderRepository,
   ) {}
 
   async getStatus() {
@@ -51,25 +53,26 @@ export class QueryService {
     };
   }
 
-  listTelemetry(from: Date | undefined, to: Date | undefined, limit: number) {
-    return this.telemetryRepository.list(from, to, limit);
+  listTelemetry(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
+    return this.telemetryRepository.list(from, to, limit, cylinderId);
   }
 
-  listLeaks(from: Date | undefined, to: Date | undefined, limit: number) {
-    return this.leakRepository.list(from, to, limit);
+  listLeaks(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
+    return this.leakRepository.list(from, to, limit, cylinderId);
   }
 
-  listCommands(limit: number) {
-    return this.commandRepository.list(limit);
+  listCommands(limit: number, cylinderId?: number) {
+    return this.commandRepository.list(limit, cylinderId);
   }
 
-  async consumption(range: "day" | "week" | "month") {
+  async consumption(range: "day" | "week" | "month", cylinderId?: number, scope: "active" | "all" = "active") {
     const to = new Date();
     const from = rangeStart(range, to);
+    const selectedCylinderId = scope === "all" ? undefined : cylinderId ?? await this.cylinderRepository.ensureActive();
     const [readings, settings] = await Promise.all([
-      this.telemetryRepository.listGasReadings(from, to),
+      this.telemetryRepository.listGasReadings(from, to, selectedCylinderId),
       this.settingsRepository.get(),
     ]);
-    return { range, from, to, ...calculateConsumption(readings, settings, range) };
+    return { range, scope, cylinderId: scope === "all" ? null : selectedCylinderId, from, to, ...calculateConsumption(readings, settings, range) };
   }
 }

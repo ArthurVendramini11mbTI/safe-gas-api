@@ -12,8 +12,8 @@ export class ValveController {
   };
 
   history = async (request: FastifyRequest, reply: FastifyReply) => {
-    const { limit } = request.query as { limit?: string };
+    const { limit, cylinderId } = request.query as { limit?: string; cylinderId?: string };
     const parsedLimit = Math.min(500, Math.max(1, Number(limit ?? 100) || 100));
-    return reply.send(await this.queryService.listCommands(parsedLimit));
+    return reply.send(await this.queryService.listCommands(parsedLimit, cylinderId ? Number(cylinderId) : undefined));
   };
 }

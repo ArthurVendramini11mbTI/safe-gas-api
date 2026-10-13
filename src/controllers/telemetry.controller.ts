@@ -11,11 +11,11 @@ export class TelemetryController {
 
   history = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = historyQuerySchema.parse(request.query);
-    return reply.send(await this.queryService.listTelemetry(query.from, query.to, query.limit));
+    return reply.send(await this.queryService.listTelemetry(query.from, query.to, query.limit, query.cylinderId));
   };
 
   consumption = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = consumptionQuerySchema.parse(request.query);
-    return reply.send(await this.queryService.consumption(query.range));
+    return reply.send(await this.queryService.consumption(query.range, query.cylinderId, query.scope));
   };
 }

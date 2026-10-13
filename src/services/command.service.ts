@@ -7,6 +7,7 @@ import type { CommandAckInput } from "../schemas/mqtt.schema.js";
 import type { CommandPublisher } from "../types/ports.js";
 import type { CommandMessage, ValveAction } from "../types/domain.js";
 import { config } from "../lib/config.js";
+import { CylinderRepository } from "../repository/cylinder.repository.js";
 
 export class CommandService {
   private simulationActive = () => false;
@@ -17,6 +18,7 @@ export class CommandService {
     private readonly leakRepository: LeakRepository,
     private readonly publisher: CommandPublisher,
     private readonly io: SocketServer,
+    private readonly cylinderRepository?: CylinderRepository,
   ) {}
 
   setSimulationStatusProvider(provider: () => boolean) {
@@ -69,7 +71,8 @@ export class CommandService {
   }
 
   private async createAndPublish(action: ValveAction, leakEventId?: string) {
-    const command = await this.commandRepository.create(action, leakEventId);
+    const cylinderId = await this.cylinderRepository?.ensureActive() ?? 1;
+    const command = await this.commandRepository.create(action, leakEventId, cylinderId);
     const message: CommandMessage = {
       schemaVersion: 1,
       deviceId: config.MQTT_DEVICE_ID,

@@ -5,11 +5,11 @@ export class LeakRepository {
     return prisma.leakEvent.findFirst({ where: { endedAt: null }, orderBy: { startedAt: "desc" } });
   }
 
-  create(peakMq2Raw: number) {
-    return prisma.leakEvent.create({ data: { peakMq2Raw } });
+  create(peakMq2Raw: number, cylinderId = 1) {
+    return prisma.leakEvent.create({ data: { peakMq2Raw, cylinderId } });
   }
 
-  createHistorical(data: { peakMq2Raw: number; startedAt: Date; endedAt: Date; acknowledgedAt: Date }) {
+  createHistorical(data: { peakMq2Raw: number; startedAt: Date; endedAt: Date; acknowledgedAt: Date; cylinderId?: number }) {
     return prisma.leakEvent.create({ data });
   }
 
@@ -36,13 +36,14 @@ export class LeakRepository {
     });
   }
 
-  list(from: Date | undefined, to: Date | undefined, limit: number) {
+  list(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
     return prisma.leakEvent.findMany({
       where: {
         startedAt: {
           ...(from ? { gte: from } : {}),
           ...(to ? { lte: to } : {}),
         },
+        ...(cylinderId ? { cylinderId } : {}),
       },
       orderBy: { startedAt: "desc" },
       take: limit,

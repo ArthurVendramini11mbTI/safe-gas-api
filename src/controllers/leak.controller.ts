@@ -8,7 +8,7 @@ export class LeakController {
 
   history = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = historyQuerySchema.parse(request.query);
-    return reply.send(await this.queryService.listLeaks(query.from, query.to, query.limit));
+    return reply.send(await this.queryService.listLeaks(query.from, query.to, query.limit, query.cylinderId));
   };
 
   acknowledge = async (request: FastifyRequest, reply: FastifyReply) => {

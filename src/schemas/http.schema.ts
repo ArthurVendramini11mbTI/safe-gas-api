@@ -22,8 +22,19 @@ export const historyQuerySchema = z.object({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   limit: z.coerce.number().int().min(1).max(2000).default(500),
+  cylinderId: z.coerce.number().int().positive().optional(),
 });
 
 export const consumptionQuerySchema = z.object({
   range: z.enum(["day", "week", "month"]).default("day"),
+  cylinderId: z.coerce.number().int().positive().optional(),
+  scope: z.enum(["active", "all"]).default("active"),
+});
+
+export const replaceCylinderBodySchema = z.object({
+  totalWeightKg: z.number().finite().nonnegative().max(100),
+  initialGasKg: z.number().finite().nonnegative().max(100),
+}).refine((data) => data.initialGasKg <= data.totalWeightKg, {
+  message: "initialGasKg não pode ser maior que totalWeightKg",
+  path: ["initialGasKg"],
 });

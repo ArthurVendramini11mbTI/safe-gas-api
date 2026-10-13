@@ -11,6 +11,7 @@ export interface SaveTelemetryInput {
   valveState: ValveState;
   esp2Online: boolean;
   receivedAt?: Date;
+  cylinderId: number;
 }
 
 function serializeReading<T extends { id: bigint }>(reading: T) {
@@ -23,13 +24,14 @@ export class TelemetryRepository {
     return serializeReading(reading);
   }
 
-  async list(from: Date | undefined, to: Date | undefined, limit: number) {
+  async list(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
     const rows = await prisma.telemetryReading.findMany({
       where: {
         receivedAt: {
           ...(from ? { gte: from } : {}),
           ...(to ? { lte: to } : {}),
         },
+        ...(cylinderId ? { cylinderId } : {}),
       },
       orderBy: { receivedAt: "desc" },
       take: limit,
@@ -37,9 +39,9 @@ export class TelemetryRepository {
     return rows.map(serializeReading);
   }
 
-  listGasReadings(from: Date, to: Date) {
+  listGasReadings(from: Date, to: Date, cylinderId?: number) {
     return prisma.telemetryReading.findMany({
-      where: { receivedAt: { gte: from, lte: to } },
+      where: { receivedAt: { gte: from, lte: to }, ...(cylinderId ? { cylinderId } : {}) },
       select: { receivedAt: true, gasKg: true },
       orderBy: { receivedAt: "asc" },
     });
