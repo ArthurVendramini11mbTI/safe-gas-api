@@ -6,6 +6,7 @@ import { StateRepository } from "../repository/state.repository.js";
 import { TelemetryRepository } from "../repository/telemetry.repository.js";
 import { calculateGas } from "./gas.service.js";
 import { CylinderRepository } from "../repository/cylinder.repository.js";
+import { ReplacementRepository } from "../repository/replacement.repository.js";
 
 export class TelemetryService {
   constructor(
@@ -15,6 +16,7 @@ export class TelemetryService {
     private readonly leakRepository: LeakRepository,
     private readonly io: SocketServer,
     private readonly cylinderRepository: CylinderRepository,
+    private readonly replacementRepository: ReplacementRepository,
   ) {}
 
   async process(input: TelemetryInput) {
@@ -26,6 +28,7 @@ export class TelemetryService {
     const { schemaVersion: _schemaVersion, ...telemetry } = input;
 
     const reading = await this.telemetryRepository.create({ ...telemetry, ...calculated, cylinderId });
+    await this.replacementRepository.updateFromTelemetry(input.totalWeightKg, new Date());
     const state = await this.stateRepository.updateTelemetry({ ...telemetry, ...calculated });
 
     const openLeak = await this.leakRepository.findOpen();

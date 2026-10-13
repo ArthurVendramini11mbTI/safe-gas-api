@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
+import { ReplacementRepository } from "./replacement.repository.js";
 
 export class CylinderRepository {
   async ensureActive() {
@@ -17,12 +18,17 @@ export class CylinderRepository {
     return prisma.gasCylinder.findFirst({ where: { removedAt: null }, orderBy: { number: "desc" } });
   }
 
-  async replace(totalWeightKg: number, initialGasKg: number) {
+  async replaceFromPending(initialGasKg: number, replacementRepository: ReplacementRepository) {
+    const pending = await replacementRepository.requireStablePending();
+    return this.replace(pending.measuredWeightKg as number, initialGasKg, pending.id);
+  }
+
+  async replace(totalWeightKg: number, initialGasKg: number, replacementId?: string) {
     return prisma.$transaction(async (tx) => {
       const state = await tx.systemState.findUnique({ where: { id: 1 } });
       const activeId = state?.activeCylinderId ?? 1;
       const previous = await tx.gasCylinder.findUnique({ where: { id: activeId } });
-      const capacityKg = previous?.capacityKg ?? 13;
+      const capacityKg = initialGasKg;
       const tareKg = totalWeightKg - initialGasKg;
       if (initialGasKg > capacityKg) throw new AppError(`O gás inicial não pode exceder a capacidade de ${capacityKg} kg`);
       const now = new Date();
@@ -55,6 +61,9 @@ export class CylinderRepository {
           cylinderId: cylinder.id,
         },
       });
+      if (replacementId) {
+        await tx.cylinderReplacement.update({ where: { id: replacementId }, data: { status: "CONFIRMED", completedAt: now, measuredWeightKg: totalWeightKg, initialGasKg, computedTareKg: tareKg } });
+      }
       return cylinder;
     });
   }

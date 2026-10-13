@@ -10,6 +10,7 @@ import { createSocketServer } from "./lib/socket.js";
 import { MqttGateway } from "./lib/mqtt.js";
 import { CommandRepository } from "./repository/command.repository.js";
 import { CylinderRepository } from "./repository/cylinder.repository.js";
+import { ReplacementRepository } from "./repository/replacement.repository.js";
 import { LeakRepository } from "./repository/leak.repository.js";
 import { SettingsRepository } from "./repository/settings.repository.js";
 import { StateRepository } from "./repository/state.repository.js";
@@ -41,9 +42,10 @@ export async function buildApp() {
   const leakRepository = new LeakRepository();
   const commandRepository = new CommandRepository();
   const cylinderRepository = new CylinderRepository();
+  const replacementRepository = new ReplacementRepository();
 
-  const telemetryService = new TelemetryService(settingsRepository, stateRepository, telemetryRepository, leakRepository, io, cylinderRepository);
-  const commandService = new CommandService(commandRepository, stateRepository, leakRepository, mqttGateway, io, cylinderRepository);
+  const telemetryService = new TelemetryService(settingsRepository, stateRepository, telemetryRepository, leakRepository, io, cylinderRepository, replacementRepository);
+  const commandService = new CommandService(commandRepository, stateRepository, leakRepository, mqttGateway, io, cylinderRepository, replacementRepository);
   const connectivityService = new ConnectivityService(stateRepository, io);
   const simulationService = new SimulationService(
     settingsRepository,
@@ -78,7 +80,7 @@ export async function buildApp() {
     leak: new LeakController(queryService, commandService),
     valve: new ValveController(commandService, queryService),
     simulation: new SimulationController(simulationService),
-    cylinder: new CylinderController(cylinderRepository),
+    cylinder: new CylinderController(cylinderRepository, replacementRepository),
   };
 
   app.get("/health", async (_request, reply) => {

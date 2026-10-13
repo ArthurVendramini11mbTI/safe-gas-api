@@ -32,9 +32,5 @@ export const consumptionQuerySchema = z.object({
 });
 
 export const replaceCylinderBodySchema = z.object({
-  totalWeightKg: z.number().finite().nonnegative().max(100),
   initialGasKg: z.number().finite().nonnegative().max(100),
-}).refine((data) => data.initialGasKg <= data.totalWeightKg, {
-  message: "initialGasKg não pode ser maior que totalWeightKg",
-  path: ["initialGasKg"],
 });

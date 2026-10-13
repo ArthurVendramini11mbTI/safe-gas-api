@@ -37,5 +37,8 @@ export async function apiRoutes(app: FastifyInstance, controllers: Controllers) 
 
   app.get("/cylinders", { schema: { tags: ["Botijões"], summary: "Lista os ciclos de botijão" } }, controllers.cylinder.list);
   app.get("/cylinders/active", { schema: { tags: ["Botijões"], summary: "Consulta o botijão ativo" } }, controllers.cylinder.active);
-  app.post("/cylinders/replace", { schema: { tags: ["Botijões"], summary: "Registra a troca do botijão" } }, controllers.cylinder.replace);
+  app.get("/cylinders/replacement", { schema: { tags: ["Botijões"], summary: "Consulta a troca em andamento" } }, controllers.cylinder.replacement);
+  app.post("/cylinders/replacement/start", { schema: { tags: ["Botijões"], summary: "Inicia uma troca" } }, controllers.cylinder.startReplacement);
+  app.post("/cylinders/replacement/cancel", { schema: { tags: ["Botijões"], summary: "Cancela uma troca" } }, controllers.cylinder.cancelReplacement);
+  app.post("/cylinders/replacement/confirm", { schema: { tags: ["Botijões"], summary: "Confirma a troca do botijão" } }, controllers.cylinder.confirmReplacement);
 }

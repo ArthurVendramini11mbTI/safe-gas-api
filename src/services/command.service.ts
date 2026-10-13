@@ -8,6 +8,7 @@ import type { CommandPublisher } from "../types/ports.js";
 import type { CommandMessage, ValveAction } from "../types/domain.js";
 import { config } from "../lib/config.js";
 import { CylinderRepository } from "../repository/cylinder.repository.js";
+import { ReplacementRepository } from "../repository/replacement.repository.js";
 
 export class CommandService {
   private simulationActive = () => false;
@@ -19,6 +20,7 @@ export class CommandService {
     private readonly publisher: CommandPublisher,
     private readonly io: SocketServer,
     private readonly cylinderRepository?: CylinderRepository,
+    private readonly replacementRepository?: ReplacementRepository,
   ) {}
 
   setSimulationStatusProvider(provider: () => boolean) {
@@ -27,6 +29,7 @@ export class CommandService {
 
   async requestValve(action: "OPEN" | "CLOSE") {
     if (this.simulationActive()) throw new AppError("Comandos físicos estão desabilitados durante a simulação", 409, "SIMULATION_ACTIVE");
+    if (await this.replacementRepository?.getPending()) throw new AppError("Finalize ou cancele a troca do botijão antes de enviar comandos", 409, "REPLACEMENT_IN_PROGRESS");
     const state = await this.stateRepository.get();
     if (!state.deviceOnline || !this.publisher.isConnected()) {
       throw new AppError("A central ESP1 está offline", 409, "DEVICE_OFFLINE");
