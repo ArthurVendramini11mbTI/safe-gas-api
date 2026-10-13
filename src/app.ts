@@ -19,12 +19,10 @@ import { CommandService } from "./services/command.service.js";
 import { ConnectivityService } from "./services/connectivity.service.js";
 import { QueryService } from "./services/query.service.js";
 import { TelemetryService } from "./services/telemetry.service.js";
-import { SimulationService } from "./services/simulation.service.js";
 import { LeakController } from "./controllers/leak.controller.js";
 import { StatusController } from "./controllers/status.controller.js";
 import { TelemetryController } from "./controllers/telemetry.controller.js";
 import { ValveController } from "./controllers/valve.controller.js";
-import { SimulationController } from "./controllers/simulation.controller.js";
 import { CylinderController } from "./controllers/cylinder.controller.js";
 import { apiRoutes } from "./routes/api.routes.js";
 
@@ -47,24 +45,12 @@ export async function buildApp() {
   const telemetryService = new TelemetryService(settingsRepository, stateRepository, telemetryRepository, leakRepository, io, cylinderRepository, replacementRepository);
   const commandService = new CommandService(commandRepository, stateRepository, leakRepository, mqttGateway, io, cylinderRepository, replacementRepository);
   const connectivityService = new ConnectivityService(stateRepository, io);
-  const simulationService = new SimulationService(
-    settingsRepository,
-    stateRepository,
-    telemetryRepository,
-    leakRepository,
-    commandRepository,
-    telemetryService,
-    io,
-    cylinderRepository,
-  );
-  commandService.setSimulationStatusProvider(() => simulationService.getStatus().active);
   const queryService = new QueryService(
     settingsRepository,
     stateRepository,
     telemetryRepository,
     leakRepository,
     commandRepository,
-    () => simulationService.getStatus(),
     cylinderRepository,
   );
 
@@ -79,7 +65,6 @@ export async function buildApp() {
     telemetry: new TelemetryController(queryService),
     leak: new LeakController(queryService, commandService),
     valve: new ValveController(commandService, queryService),
-    simulation: new SimulationController(simulationService),
     cylinder: new CylinderController(cylinderRepository, replacementRepository),
   };
 
@@ -108,7 +93,6 @@ export async function buildApp() {
   });
   app.addHook("onClose", async () => {
     clearInterval(maintenanceTimer);
-    await simulationService.stop();
     io.close();
     await mqttGateway.stop();
     await prisma.$disconnect();

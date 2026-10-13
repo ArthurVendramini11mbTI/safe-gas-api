@@ -11,8 +11,6 @@ import { CylinderRepository } from "../repository/cylinder.repository.js";
 import { ReplacementRepository } from "../repository/replacement.repository.js";
 
 export class CommandService {
-  private simulationActive = () => false;
-
   constructor(
     private readonly commandRepository: CommandRepository,
     private readonly stateRepository: StateRepository,
@@ -23,12 +21,7 @@ export class CommandService {
     private readonly replacementRepository?: ReplacementRepository,
   ) {}
 
-  setSimulationStatusProvider(provider: () => boolean) {
-    this.simulationActive = provider;
-  }
-
   async requestValve(action: "OPEN" | "CLOSE") {
-    if (this.simulationActive()) throw new AppError("Comandos físicos estão desabilitados durante a simulação", 409, "SIMULATION_ACTIVE");
     if (await this.replacementRepository?.getPending()) throw new AppError("Finalize ou cancele a troca do botijão antes de enviar comandos", 409, "REPLACEMENT_IN_PROGRESS");
     const state = await this.stateRepository.get();
     if (!state.deviceOnline || !this.publisher.isConnected()) {
@@ -49,7 +42,6 @@ export class CommandService {
   }
 
   async requestSafetyReset(leakEventId: string) {
-    if (this.simulationActive()) throw new AppError("Comandos físicos estão desabilitados durante a simulação", 409, "SIMULATION_ACTIVE");
     const leak = await this.leakRepository.findById(leakEventId);
     if (!leak) throw new AppError("Evento de vazamento não encontrado", 404, "LEAK_NOT_FOUND");
     if (!leak.endedAt) throw new AppError("O vazamento ainda está ativo", 409, "LEAK_ACTIVE");

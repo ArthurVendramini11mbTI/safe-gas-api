@@ -16,7 +16,6 @@ export class QueryService {
     private readonly telemetryRepository: TelemetryRepository,
     private readonly leakRepository: LeakRepository,
     private readonly commandRepository: CommandRepository,
-    private readonly simulationStatus: () => unknown = () => ({ active: false }),
     private readonly cylinderRepository: CylinderRepository,
   ) {}
 
@@ -26,7 +25,7 @@ export class QueryService {
       this.settingsRepository.get(),
       this.leakRepository.findLatestUnacknowledged(),
     ]);
-    return { ...state, settings, unacknowledgedLeak, simulation: this.simulationStatus() };
+    return { ...state, settings, unacknowledgedLeak };
   }
 
   getSettings() {

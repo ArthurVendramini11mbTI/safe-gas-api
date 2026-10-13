@@ -3,7 +3,6 @@ import type { LeakController } from "../controllers/leak.controller.js";
 import type { StatusController } from "../controllers/status.controller.js";
 import type { TelemetryController } from "../controllers/telemetry.controller.js";
 import type { ValveController } from "../controllers/valve.controller.js";
-import type { SimulationController } from "../controllers/simulation.controller.js";
 import type { CylinderController } from "../controllers/cylinder.controller.js";
 
 interface Controllers {
@@ -11,7 +10,6 @@ interface Controllers {
   telemetry: TelemetryController;
   leak: LeakController;
   valve: ValveController;
-  simulation: SimulationController;
   cylinder: CylinderController;
 }
 
@@ -29,11 +27,6 @@ export async function apiRoutes(app: FastifyInstance, controllers: Controllers) 
 
   app.post("/valve/commands", { schema: { tags: ["Válvula"], summary: "Solicita abertura ou fechamento" } }, controllers.valve.command);
   app.get("/valve/commands", { schema: { tags: ["Válvula"], summary: "Histórico de comandos" } }, controllers.valve.history);
-
-  app.get("/simulation/status", { schema: { tags: ["Simulação"], summary: "Estado da simulação" } }, controllers.simulation.status);
-  app.post("/simulation/start", { schema: { tags: ["Simulação"], summary: "Inicia a simulação" } }, controllers.simulation.start);
-  app.post("/simulation/stop", { schema: { tags: ["Simulação"], summary: "Encerra a simulação" } }, controllers.simulation.stop);
-  app.post("/simulation/state", { schema: { tags: ["Simulação"], summary: "Atualiza peso ou vazamento simulado" } }, controllers.simulation.updateState);
 
   app.get("/cylinders", { schema: { tags: ["Botijões"], summary: "Lista os ciclos de botijão" } }, controllers.cylinder.list);
   app.get("/cylinders/active", { schema: { tags: ["Botijões"], summary: "Consulta o botijão ativo" } }, controllers.cylinder.active);
