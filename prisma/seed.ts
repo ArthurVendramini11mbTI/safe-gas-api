@@ -44,6 +44,49 @@ async function main() {
   });
   await prisma.gasCylinder.deleteMany({ where: { number: { notIn: [1, 2, 3] } } });
 
+  const securityEvents = [
+    { cylinderId: cylinders[0]!.id, daysAgo: 76, durationMinutes: 4, peakMq2Raw: 720 },
+    { cylinderId: cylinders[1]!.id, daysAgo: 43, durationMinutes: 7, peakMq2Raw: 805 },
+    { cylinderId: cylinders[2]!.id, daysAgo: 5, durationMinutes: 3, peakMq2Raw: 690 },
+  ];
+  for (const event of securityEvents) {
+    const startedAt = new Date(now - event.daysAgo * 24 * 60 * 60 * 1000);
+    const endedAt = new Date(startedAt.getTime() + event.durationMinutes * 60 * 1000);
+    const leak = await prisma.leakEvent.create({
+      data: {
+        cylinderId: event.cylinderId,
+        startedAt,
+        endedAt,
+        acknowledgedAt: new Date(endedAt.getTime() + 30 * 1000),
+        peakMq2Raw: event.peakMq2Raw,
+      },
+    });
+    await prisma.valveCommand.create({
+      data: {
+        cylinderId: event.cylinderId,
+        leakEventId: leak.id,
+        action: "CLOSE",
+        status: "APPLIED",
+        reason: "Fechamento automático por vazamento detectado",
+        requestedAt: startedAt,
+        completedAt: new Date(startedAt.getTime() + 2 * 1000),
+        reportedValveState: "CLOSED",
+      },
+    });
+    await prisma.valveCommand.create({
+      data: {
+        cylinderId: event.cylinderId,
+        leakEventId: leak.id,
+        action: "RESET_SAFETY",
+        status: "APPLIED",
+        reason: "Vazamento reconhecido pelo usuário",
+        requestedAt: new Date(endedAt.getTime() + 30 * 1000),
+        completedAt: new Date(endedAt.getTime() + 32 * 1000),
+        reportedValveState: "CLOSED",
+      },
+    });
+  }
+
   const samples = cylinders.flatMap((cylinder, cylinderIndex) => Array.from({ length: cylinderIndex === 2 ? 30 : 31 }, (_, day) => {
     const profile = profiles[cylinderIndex]!;
     const variation = 1 + (((day + cylinderIndex * 2) % 5) - 2) * 0.08;
