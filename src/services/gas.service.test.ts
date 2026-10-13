@@ -25,7 +25,10 @@ describe("calculateConsumption", () => {
   });
 
   it("retorna zero sem amostras suficientes", () => {
-    expect(calculateConsumption([], settings, "week")).toEqual({ totalKg: 0, buckets: [] });
+    const result = calculateConsumption([], settings, "week", new Date("2026-10-14T12:00:00.000Z"));
+    expect(result.totalKg).toBe(0);
+    expect(result.buckets).toHaveLength(7);
+    expect(new Date(result.buckets[0]!.start).getUTCDay()).toBe(0);
   });
 
   it("preenche as 24 horas no gráfico diário", () => {
@@ -36,5 +39,18 @@ describe("calculateConsumption", () => {
     const result = calculateConsumption(readings, settings, "day");
     expect(result.buckets).toHaveLength(24);
     expect(result.buckets.some((bucket) => bucket.consumptionKg === 0)).toBe(true);
+  });
+
+  it("ordena a semana de domingo a sábado e preenche o mês real", () => {
+    const periodEnd = new Date("2026-10-13T12:00:00.000Z");
+    const readings = [
+      { gasKg: 10, receivedAt: new Date("2026-10-01T00:00:00.000Z") },
+      { gasKg: 9.8, receivedAt: new Date("2026-10-02T00:00:00.000Z") },
+    ];
+    const week = calculateConsumption(readings, settings, "week", periodEnd);
+    const month = calculateConsumption(readings, settings, "month", periodEnd);
+    expect(week.buckets).toHaveLength(7);
+    expect(new Date(week.buckets[0]!.start).getUTCDay()).toBe(0);
+    expect(month.buckets).toHaveLength(31);
   });
 });

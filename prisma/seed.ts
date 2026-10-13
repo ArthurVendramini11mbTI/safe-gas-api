@@ -23,7 +23,7 @@ async function main() {
     { tareKg: 0.6, initialGasKg: 4, dailyUseKg: 0.1 },
     { tareKg: 0.7, initialGasKg: 5, dailyUseKg: 0.13 },
   ];
-  const cylinders = [];
+  const cylinders: Array<{ id: number; installedAt: Date }> = [];
   for (let number = 1; number <= 3; number += 1) {
     const profile = profiles[number - 1]!;
     const installedAt = new Date(now - (4 - number) * 30 * 24 * 60 * 60 * 1000);
@@ -44,7 +44,7 @@ async function main() {
   });
   await prisma.gasCylinder.deleteMany({ where: { number: { notIn: [1, 2, 3] } } });
 
-  const samples = cylinders.flatMap((cylinder, cylinderIndex) => Array.from({ length: 31 }, (_, day) => {
+  const samples = cylinders.flatMap((cylinder, cylinderIndex) => Array.from({ length: cylinderIndex === 2 ? 30 : 31 }, (_, day) => {
     const profile = profiles[cylinderIndex]!;
     const variation = 1 + (((day + cylinderIndex * 2) % 5) - 2) * 0.08;
     const gasKg = Number(Math.max(0.1, profile.initialGasKg - day * profile.dailyUseKg * variation).toFixed(3));
@@ -62,6 +62,26 @@ async function main() {
       cylinderId: cylinder.id,
     };
   }));
+  const activeProfile = profiles[2]!;
+  const lastDailyGas = Number(Math.max(0.1, activeProfile.initialGasKg - 29 * activeProfile.dailyUseKg * (1 + (((29 + 4) % 5) - 2) * 0.08)).toFixed(3));
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const todaySamples = Array.from({ length: 24 }, (_, hour) => {
+    const gasKg = Number(Math.max(0.1, lastDailyGas - hour * 0.012).toFixed(3));
+    return {
+      deviceId: "esp1",
+      receivedAt: new Date(todayStart.getTime() + hour * 60 * 60 * 1000),
+      totalWeightKg: Number((activeProfile.tareKg + gasKg).toFixed(3)),
+      gasKg,
+      gasPercentage: Number(((gasKg / activeProfile.initialGasKg) * 100).toFixed(2)),
+      mq2Raw: 175 + (hour % 4) * 3,
+      leakActive: false,
+      valveState: "CLOSED" as const,
+      esp2Online: true,
+      cylinderId: cylinders[2]!.id,
+    };
+  });
+  samples.push(...todaySamples);
   await prisma.telemetryReading.createMany({ data: samples });
 }
 

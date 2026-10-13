@@ -72,6 +72,6 @@ export class QueryService {
       this.telemetryRepository.listGasReadings(from, to, selectedCylinderId),
       this.settingsRepository.get(),
     ]);
-    return { range, scope, cylinderId: scope === "all" ? null : selectedCylinderId, from, to, ...calculateConsumption(readings, settings, range) };
+    return { range, scope, cylinderId: scope === "all" ? null : selectedCylinderId, from, to, ...calculateConsumption(readings, settings, range, to) };
   }
 }
