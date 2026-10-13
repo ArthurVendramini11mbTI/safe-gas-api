@@ -18,14 +18,20 @@ async function main() {
   await prisma.cylinderReplacement.deleteMany();
 
   const now = Date.now();
+  const profiles = [
+    { tareKg: 0.5, initialGasKg: 3, dailyUseKg: 0.07 },
+    { tareKg: 0.6, initialGasKg: 4, dailyUseKg: 0.1 },
+    { tareKg: 0.7, initialGasKg: 5, dailyUseKg: 0.13 },
+  ];
   const cylinders = [];
   for (let number = 1; number <= 3; number += 1) {
+    const profile = profiles[number - 1]!;
     const installedAt = new Date(now - (4 - number) * 30 * 24 * 60 * 60 * 1000);
     const removedAt = number < 3 ? new Date(installedAt.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
     const cylinder = await prisma.gasCylinder.upsert({
       where: { number },
-      create: { number, installedAt, removedAt, tareKg: 0.5, capacityKg: 3, initialGasKg: 3, initialWeightKg: 3.5 },
-      update: { installedAt, removedAt, tareKg: 0.5, capacityKg: 3, initialGasKg: 3, initialWeightKg: 3.5, finalWeightKg: removedAt ? 0.5 : null },
+      create: { number, installedAt, removedAt, tareKg: profile.tareKg, capacityKg: profile.initialGasKg, initialGasKg: profile.initialGasKg, initialWeightKg: profile.tareKg + profile.initialGasKg },
+      update: { installedAt, removedAt, tareKg: profile.tareKg, capacityKg: profile.initialGasKg, initialGasKg: profile.initialGasKg, initialWeightKg: profile.tareKg + profile.initialGasKg, finalWeightKg: removedAt ? profile.tareKg : null },
     });
     cylinders.push(cylinder);
   }
@@ -39,14 +45,16 @@ async function main() {
   await prisma.gasCylinder.deleteMany({ where: { number: { notIn: [1, 2, 3] } } });
 
   const samples = cylinders.flatMap((cylinder, cylinderIndex) => Array.from({ length: 31 }, (_, day) => {
-    const gasKg = Number(Math.max(0.1, 3 - (day / 30) * 2.9).toFixed(3));
+    const profile = profiles[cylinderIndex]!;
+    const variation = 1 + (((day + cylinderIndex * 2) % 5) - 2) * 0.08;
+    const gasKg = Number(Math.max(0.1, profile.initialGasKg - day * profile.dailyUseKg * variation).toFixed(3));
     const receivedAt = new Date(cylinder.installedAt.getTime() + day * 24 * 60 * 60 * 1000);
     return {
       deviceId: "esp1",
       receivedAt,
-      totalWeightKg: Number((0.5 + gasKg).toFixed(3)),
+      totalWeightKg: Number((profile.tareKg + gasKg).toFixed(3)),
       gasKg,
-      gasPercentage: Number(((gasKg / 3) * 100).toFixed(2)),
+      gasPercentage: Number(((gasKg / profile.initialGasKg) * 100).toFixed(2)),
       mq2Raw: 170 + ((day + cylinderIndex) % 4) * 3,
       leakActive: false,
       valveState: "CLOSED" as const,
