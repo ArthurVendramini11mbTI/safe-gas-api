@@ -40,8 +40,7 @@ export function calculateConsumption(
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([start, consumptionKg]) => ({ start, consumptionKg: Number(consumptionKg.toFixed(3)) }));
 
-  // No período diário, o gráfico precisa representar todas as 24 horas,
-  // inclusive as horas em que não houve consumo.
+  // Os períodos devem mostrar também os intervalos sem consumo.
   if (range === "day") {
     const latest = readings[readings.length - 1]!.receivedAt;
     const end = new Date(latest);
@@ -50,6 +49,19 @@ export function calculateConsumption(
     buckets = Array.from({ length: 24 }, (_, index) => {
       const start = new Date(end.getTime() - (23 - index) * 60 * 60 * 1000).toISOString();
       return { start, consumptionKg: values.get(start) ?? 0 };
+    });
+  } else {
+    const latest = new Date(readings[readings.length - 1]!.receivedAt);
+    const end = new Date(Date.UTC(latest.getUTCFullYear(), latest.getUTCMonth(), latest.getUTCDate()));
+    const start = range === "week"
+      ? new Date(end.getTime() - 6 * 24 * 60 * 60 * 1000)
+      : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+    const dayCount = Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const values = new Map(buckets.map((bucket) => [bucket.start, bucket.consumptionKg]));
+    buckets = Array.from({ length: dayCount }, (_, index) => {
+      const bucketStartDate = new Date(start.getTime() + index * 24 * 60 * 60 * 1000);
+      const bucketKey = bucketStartDate.toISOString();
+      return { start: bucketKey, consumptionKg: values.get(bucketKey) ?? 0 };
     });
   }
   const totalKg = buckets.reduce((sum, bucket) => sum + bucket.consumptionKg, 0);
