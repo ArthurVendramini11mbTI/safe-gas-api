@@ -24,6 +24,9 @@ import { StatusController } from "./controllers/status.controller.js";
 import { TelemetryController } from "./controllers/telemetry.controller.js";
 import { ValveController } from "./controllers/valve.controller.js";
 import { CylinderController } from "./controllers/cylinder.controller.js";
+import { AuthController } from "./controllers/auth.controller.js";
+import { AuthService } from "./services/auth.service.js";
+import { UserRepository } from "./repository/user.repository.js";
 import { apiRoutes } from "./routes/api.routes.js";
 
 export async function buildApp() {
@@ -41,6 +44,7 @@ export async function buildApp() {
   const commandRepository = new CommandRepository();
   const cylinderRepository = new CylinderRepository();
   const replacementRepository = new ReplacementRepository();
+  const authService = new AuthService(new UserRepository());
 
   const telemetryService = new TelemetryService(settingsRepository, stateRepository, telemetryRepository, leakRepository, io, cylinderRepository, replacementRepository);
   const commandService = new CommandService(commandRepository, stateRepository, leakRepository, mqttGateway, io, cylinderRepository, replacementRepository);
@@ -66,11 +70,16 @@ export async function buildApp() {
     leak: new LeakController(queryService, commandService),
     valve: new ValveController(commandService, queryService),
     cylinder: new CylinderController(cylinderRepository, replacementRepository),
+    auth: new AuthController(authService),
   };
 
   app.get("/health", async (_request, reply) => {
     await prisma.$queryRaw`SELECT 1`;
     return reply.send({ status: "ok", database: "connected", mqtt: mqttGateway.isConnected() });
+  });
+  app.addHook("onRequest", async (request) => {
+    if (!request.url.startsWith("/api/") || request.url.startsWith("/api/auth/")) return;
+    await authService.verify(request.headers.authorization, true);
   });
   await app.register(async (instance) => apiRoutes(instance, controllers), { prefix: "/api" });
 

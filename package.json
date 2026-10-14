@@ -24,6 +24,7 @@
     "@prisma/client": "^7.0.0",
     "dotenv": "latest",
     "fastify": "latest",
+    "jose": "^6.2.12",
     "mqtt": "latest",
     "pg": "latest",
     "socket.io": "latest",

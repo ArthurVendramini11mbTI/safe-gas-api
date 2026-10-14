@@ -22,6 +22,8 @@ export const envSchema = z.object({
   COMMAND_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   DEVICE_OFFLINE_AFTER_MS: z.coerce.number().int().positive().default(90000),
   SAFETY_RESET_DELAY_MS: z.coerce.number().int().nonnegative().default(5000),
+  JWT_SECRET: z.string().min(16).default("safe-gas-development-jwt-secret"),
+  PANEL_ALLOWED_EMAIL: z.string().email().default("safegas@gmail.com"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
 });
 

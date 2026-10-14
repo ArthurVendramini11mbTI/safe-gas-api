@@ -4,6 +4,7 @@ import type { StatusController } from "../controllers/status.controller.js";
 import type { TelemetryController } from "../controllers/telemetry.controller.js";
 import type { ValveController } from "../controllers/valve.controller.js";
 import type { CylinderController } from "../controllers/cylinder.controller.js";
+import type { AuthController } from "../controllers/auth.controller.js";
 
 interface Controllers {
   status: StatusController;
@@ -11,9 +12,13 @@ interface Controllers {
   leak: LeakController;
   valve: ValveController;
   cylinder: CylinderController;
+  auth: AuthController;
 }
 
 export async function apiRoutes(app: FastifyInstance, controllers: Controllers) {
+  app.post("/auth/signup", { schema: { tags: ["Autenticação"], summary: "Cria uma conta" } }, controllers.auth.signup);
+  app.post("/auth/login", { schema: { tags: ["Autenticação"], summary: "Realiza login" } }, controllers.auth.login);
+  app.get("/auth/me", { schema: { tags: ["Autenticação"], summary: "Consulta a sessão atual" } }, controllers.auth.me);
   app.get("/status", { schema: { tags: ["Sistema"], summary: "Situação atual da central" } }, controllers.status.get);
   app.get("/settings", { schema: { tags: ["Sistema"], summary: "Configuração da balança" } }, controllers.status.getSettings);
   app.put("/settings", { schema: { tags: ["Sistema"], summary: "Atualiza tara e capacidade" } }, controllers.status.updateSettings);

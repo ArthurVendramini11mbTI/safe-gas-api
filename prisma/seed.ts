@@ -7,6 +7,11 @@ if (!connectionString) throw new Error("DATABASE_URL do Supabase não foi config
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 async function main() {
+  await prisma.user.upsert({
+    where: { email: "safegas@gmail.com" },
+    create: { name: "SafeGás", email: "safegas@gmail.com", password: "safegastcc" },
+    update: { name: "SafeGás", password: "safegastcc" },
+  });
   await prisma.systemSettings.upsert({
     where: { id: 1 },
     create: { id: 1 },
