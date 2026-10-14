@@ -32,5 +32,5 @@ export const consumptionQuerySchema = z.object({
 });
 
 export const replaceCylinderBodySchema = z.object({
-  initialGasKg: z.number().finite().nonnegative().max(100),
+  initialGasKg: z.number().finite().positive().max(100),
 });

@@ -30,7 +30,8 @@ export class CylinderRepository {
       const previous = await tx.gasCylinder.findUnique({ where: { id: activeId } });
       const capacityKg = initialGasKg;
       const tareKg = totalWeightKg - initialGasKg;
-      if (initialGasKg > capacityKg) throw new AppError(`O gás inicial não pode exceder a capacidade de ${capacityKg} kg`);
+      if (initialGasKg <= 0) throw new AppError("Informe uma quantidade de gás maior que zero.", 400, "INVALID_INITIAL_GAS");
+      if (initialGasKg >= totalWeightKg) throw new AppError("O gás inicial deve ser menor que o peso total medido do botijão.", 400, "INVALID_INITIAL_GAS");
       const now = new Date();
       await tx.gasCylinder.updateMany({
         where: { id: activeId, removedAt: null },
