@@ -20,22 +20,28 @@ export class CylinderRepository {
 
   async replaceFromPending(initialGasKg: number, replacementRepository: ReplacementRepository) {
     const pending = await replacementRepository.requireStablePending();
-    return this.replace(pending.measuredWeightKg as number, initialGasKg, pending.id);
-  }
-
-  async replace(totalWeightKg: number, initialGasKg: number, replacementId?: string) {
+    const totalWeightKg = pending.measuredWeightKg as number;
+    if (initialGasKg <= 0) throw new AppError("Informe uma quantidade de gás maior que zero.", 400, "INVALID_INITIAL_GAS");
+    if (initialGasKg >= totalWeightKg) throw new AppError("O gás inicial deve ser menor que o peso total medido do botijão.", 400, "INVALID_INITIAL_GAS");
     return prisma.$transaction(async (tx) => {
+      const claimed = await tx.cylinderReplacement.updateMany({
+        where: { id: pending.id, status: "PENDING" },
+        data: {
+          status: "CONFIRMED",
+          completedAt: new Date(),
+          initialGasKg,
+          computedTareKg: totalWeightKg - initialGasKg,
+        },
+      });
+      if (claimed.count !== 1) throw new AppError("Esta troca já foi confirmada ou cancelada", 409, "REPLACEMENT_ALREADY_FINISHED");
       const state = await tx.systemState.findUnique({ where: { id: 1 } });
       const activeId = state?.activeCylinderId ?? 1;
-      const previous = await tx.gasCylinder.findUnique({ where: { id: activeId } });
       const capacityKg = initialGasKg;
       const tareKg = totalWeightKg - initialGasKg;
-      if (initialGasKg <= 0) throw new AppError("Informe uma quantidade de gás maior que zero.", 400, "INVALID_INITIAL_GAS");
-      if (initialGasKg >= totalWeightKg) throw new AppError("O gás inicial deve ser menor que o peso total medido do botijão.", 400, "INVALID_INITIAL_GAS");
       const now = new Date();
       await tx.gasCylinder.updateMany({
         where: { id: activeId, removedAt: null },
-        data: { removedAt: now, ...(state?.totalWeightKg !== null && state?.totalWeightKg !== undefined ? { finalWeightKg: state.totalWeightKg } : {}) },
+        data: { removedAt: now, ...(state?.cylinderPresent === true && state.totalWeightKg !== null ? { finalWeightKg: state.totalWeightKg } : {}) },
       });
       const last = await tx.gasCylinder.findFirst({ orderBy: { number: "desc" }, select: { number: true } });
       const cylinder = await tx.gasCylinder.create({
@@ -45,8 +51,8 @@ export class CylinderRepository {
       const gasPercentage = capacityKg === 0 ? 0 : (gasKg / capacityKg) * 100;
       await tx.systemState.upsert({
         where: { id: 1 },
-        create: { id: 1, activeCylinderId: cylinder.id, totalWeightKg, gasKg, gasPercentage },
-        update: { activeCylinderId: cylinder.id, totalWeightKg, gasKg, gasPercentage },
+        create: { id: 1, activeCylinderId: cylinder.id, totalWeightKg, gasKg, gasPercentage, weightStatus: "VALID", weightBootId: pending.measurementBootId, weightSampleSequence: pending.measurementSampleSequence, weightMeasuredAt: pending.lastReadingAt, cylinderPresent: true },
+        update: { activeCylinderId: cylinder.id, totalWeightKg, gasKg, gasPercentage, weightStatus: "VALID", weightBootId: pending.measurementBootId, weightSampleSequence: pending.measurementSampleSequence, weightMeasuredAt: pending.lastReadingAt, cylinderPresent: true },
       });
       await tx.telemetryReading.create({
         data: {
@@ -55,6 +61,10 @@ export class CylinderRepository {
           totalWeightKg,
           gasKg,
           gasPercentage,
+          weightStatus: "VALID",
+          weightBootId: pending.measurementBootId,
+          weightSampleSequence: pending.measurementSampleSequence,
+          cylinderPresent: true,
           mq2Raw: state?.mq2Raw ?? 0,
           leakActive: false,
           valveState: state?.valveState ?? "CLOSED",
@@ -62,9 +72,6 @@ export class CylinderRepository {
           cylinderId: cylinder.id,
         },
       });
-      if (replacementId) {
-        await tx.cylinderReplacement.update({ where: { id: replacementId }, data: { status: "CONFIRMED", completedAt: now, measuredWeightKg: totalWeightKg, initialGasKg, computedTareKg: tareKg } });
-      }
       return cylinder;
     });
   }

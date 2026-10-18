@@ -86,8 +86,11 @@ Os tópicos usam `safe-gas/esp1` como base, configurável por `MQTT_DEVICE_ID`.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "deviceId": "esp1",
+  "weightStatus": "VALID",
+  "weightBootId": "A1B2C3D4",
+  "weightSampleSequence": 42,
   "totalWeightKg": 22.5,
   "mq2Raw": 180,
   "leakActive": false,
@@ -95,6 +98,8 @@ Os tópicos usam `safe-gas/esp1` como base, configurável por `MQTT_DEVICE_ID`.
   "esp2Online": true
 }
 ```
+
+`totalWeightKg` só é enviado com `weightStatus=VALID`. Os demais estados são `UNCALIBRATED`, `UNAVAILABLE` e `INVALID`. O backend ainda recebe telemetria v1 para preservar válvula, vazamento e conectividade, mas ignora seu peso por não haver indicação de validade.
 
 ### Presença — `safe-gas/esp1/status`
 

@@ -21,10 +21,17 @@ export function calculateConsumption(
 
   if (readings.length >= 2) {
     let reference = readings[0]!.gasKg;
+    let referenceCylinderId = readings[0]!.cylinderId;
     for (const reading of readings.slice(1)) {
+      if (reading.cylinderId !== undefined && referenceCylinderId !== undefined && reading.cylinderId !== referenceCylinderId) {
+        reference = reading.gasKg;
+        referenceCylinderId = reading.cylinderId;
+        continue;
+      }
       const increase = reading.gasKg - reference;
       if (increase >= settings.refillThresholdKg) {
-        reference = reading.gasKg;
+        // Um ciclo de botijão não é recarregado. Ignore objetos adicionados e
+        // oscilações grandes sem transformar sua retirada posterior em consumo.
         continue;
       }
 

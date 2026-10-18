@@ -1,6 +1,7 @@
 export type ValveState = "OPEN" | "CLOSED" | "UNKNOWN";
 export type ValveAction = "OPEN" | "CLOSE" | "RESET_SAFETY";
 export type CommandStatus = "PENDING" | "APPLIED" | "REJECTED" | "FAILED" | "EXPIRED";
+export type WeightStatus = "LEGACY" | "VALID" | "UNCALIBRATED" | "UNAVAILABLE" | "INVALID";
 
 export interface GasSettings {
   tareKg: number;
@@ -19,6 +20,7 @@ export type GasSettingsUpdate = Pick<GasSettings, "noiseToleranceKg" | "refillTh
 export interface GasReading {
   receivedAt: Date;
   gasKg: number;
+  cylinderId?: number;
 }
 
 export interface ConsumptionBucket {

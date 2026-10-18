@@ -35,7 +35,7 @@ export class QueryService {
   async updateSettings(data: GasSettingsUpdate) {
     const settings = await this.settingsRepository.update(data);
     const state = await this.stateRepository.get();
-    if (state.totalWeightKg !== null) {
+    if (state.totalWeightKg !== null && state.weightStatus === "VALID" && state.cylinderPresent === true) {
       const calculated = calculateGas(state.totalWeightKg, settings);
       await this.stateRepository.updateGasCalculation(calculated.gasKg, calculated.gasPercentage);
     }

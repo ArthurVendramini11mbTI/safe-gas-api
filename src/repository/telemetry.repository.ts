@@ -1,11 +1,15 @@
 import { prisma } from "../lib/prisma.js";
-import type { ValveState } from "../types/domain.js";
+import type { ValveState, WeightStatus } from "../types/domain.js";
 
 export interface SaveTelemetryInput {
   deviceId: string;
-  totalWeightKg: number;
-  gasKg: number;
-  gasPercentage: number;
+  totalWeightKg: number | null;
+  gasKg: number | null;
+  gasPercentage: number | null;
+  weightStatus: WeightStatus;
+  weightBootId: string | null;
+  weightSampleSequence: number | null;
+  cylinderPresent: boolean | null;
   mq2Raw: number;
   leakActive: boolean;
   valveState: ValveState;
@@ -22,6 +26,10 @@ export class TelemetryRepository {
   async create(data: SaveTelemetryInput) {
     const reading = await prisma.telemetryReading.create({ data });
     return serializeReading(reading);
+  }
+
+  latest(cylinderId: number) {
+    return prisma.telemetryReading.findFirst({ where: { cylinderId }, orderBy: { receivedAt: "desc" } });
   }
 
   async list(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
@@ -41,9 +49,14 @@ export class TelemetryRepository {
 
   listGasReadings(from: Date, to: Date, cylinderId?: number) {
     return prisma.telemetryReading.findMany({
-      where: { receivedAt: { gte: from, lte: to }, ...(cylinderId ? { cylinderId } : {}) },
-      select: { receivedAt: true, gasKg: true },
+      where: {
+        receivedAt: { gte: from, lte: to },
+        gasKg: { not: null },
+        cylinderPresent: true,
+        ...(cylinderId ? { cylinderId } : {}),
+      },
+      select: { receivedAt: true, gasKg: true, cylinderId: true },
       orderBy: { receivedAt: "asc" },
-    });
+    }).then((rows) => rows.map((row) => ({ receivedAt: row.receivedAt, gasKg: row.gasKg as number, cylinderId: row.cylinderId })));
   }
 }

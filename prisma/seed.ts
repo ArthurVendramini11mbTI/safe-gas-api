@@ -44,8 +44,8 @@ async function main() {
   const activeCylinder = cylinders[2]!;
   await prisma.systemState.upsert({
     where: { id: 1 },
-    create: { id: 1, deviceId: "esp1", valveState: "CLOSED", activeCylinderId: activeCylinder.id, totalWeightKg: 0.6, gasKg: 0.1, gasPercentage: 3.33, esp2Online: true },
-    update: { activeCylinderId: activeCylinder.id, totalWeightKg: 0.6, gasKg: 0.1, gasPercentage: 3.33 },
+    create: { id: 1, deviceId: "esp1", valveState: "CLOSED", activeCylinderId: activeCylinder.id, totalWeightKg: 0.6, gasKg: 0.1, gasPercentage: 3.33, esp2Online: true, weightStatus: "VALID", weightBootId: "SEED", weightSampleSequence: 1, weightMeasuredAt: new Date(), cylinderPresent: true },
+    update: { activeCylinderId: activeCylinder.id, totalWeightKg: 0.6, gasKg: 0.1, gasPercentage: 3.33, weightStatus: "VALID", weightBootId: "SEED", weightSampleSequence: 1, weightMeasuredAt: new Date(), cylinderPresent: true },
   });
   await prisma.gasCylinder.deleteMany({ where: { number: { notIn: [1, 2, 3] } } });
 
@@ -107,6 +107,10 @@ async function main() {
       leakActive: false,
       valveState: "CLOSED" as const,
       esp2Online: true,
+      weightStatus: "VALID" as const,
+      weightBootId: "SEED",
+      weightSampleSequence: day + 1,
+      cylinderPresent: true,
       cylinderId: cylinder.id,
     };
   }));
@@ -126,6 +130,10 @@ async function main() {
       leakActive: false,
       valveState: "CLOSED" as const,
       esp2Online: true,
+      weightStatus: "VALID" as const,
+      weightBootId: "SEED-TODAY",
+      weightSampleSequence: hour + 1,
+      cylinderPresent: true,
       cylinderId: cylinders[2]!.id,
     };
   });

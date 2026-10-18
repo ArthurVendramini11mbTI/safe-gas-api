@@ -15,13 +15,22 @@ describe("calculateGas", () => {
 });
 
 describe("calculateConsumption", () => {
-  it("acumula quedas, filtra ruído e ignora reposição", () => {
+  it("acumula quedas, filtra ruído e não transforma objeto extra em consumo", () => {
     const base = Date.parse("2026-10-10T10:00:00.000Z");
     const readings = [10, 9.97, 9.93, 11, 10.9].map((gasKg, index) => ({
       gasKg,
       receivedAt: new Date(base + index * 60_000),
     }));
-    expect(calculateConsumption(readings, settings, "day").totalKg).toBeCloseTo(0.17);
+    expect(calculateConsumption(readings, settings, "day").totalKg).toBeCloseTo(0.07);
+  });
+
+  it("reinicia a referência quando começa outro botijão", () => {
+    const readings = [
+      { gasKg: 0.1, cylinderId: 1, receivedAt: new Date("2026-10-10T10:00:00.000Z") },
+      { gasKg: 5, cylinderId: 2, receivedAt: new Date("2026-10-10T11:00:00.000Z") },
+      { gasKg: 4.8, cylinderId: 2, receivedAt: new Date("2026-10-10T12:00:00.000Z") },
+    ];
+    expect(calculateConsumption(readings, settings, "day").totalKg).toBeCloseTo(0.2);
   });
 
   it("retorna zero sem amostras suficientes", () => {

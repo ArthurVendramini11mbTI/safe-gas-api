@@ -33,6 +33,14 @@ enum ReplacementStatus {
   CANCELLED
 }
 
+enum WeightStatus {
+  LEGACY
+  VALID
+  UNCALIBRATED
+  UNAVAILABLE
+  INVALID
+}
+
 model SystemSettings {
   id                  Int      @id @default(1)
   noiseToleranceKg    Float    @default(0.05)
@@ -66,6 +74,11 @@ model SystemState {
   totalWeightKg       Float?
   gasKg               Float?
   gasPercentage       Float?
+  weightStatus        WeightStatus @default(LEGACY)
+  weightBootId        String?
+  weightSampleSequence Int?
+  weightMeasuredAt    DateTime?
+  cylinderPresent     Boolean?
   updatedAt           DateTime   @updatedAt
   activeCylinderId    Int        @default(1)
   activeCylinder      GasCylinder @relation(fields: [activeCylinderId], references: [id])
@@ -77,9 +90,13 @@ model TelemetryReading {
   id                  BigInt     @id @default(autoincrement())
   deviceId            String
   receivedAt          DateTime   @default(now())
-  totalWeightKg       Float
-  gasKg               Float
-  gasPercentage       Float
+  totalWeightKg       Float?
+  gasKg               Float?
+  gasPercentage       Float?
+  weightStatus        WeightStatus @default(LEGACY)
+  weightBootId        String?
+  weightSampleSequence Int?
+  cylinderPresent     Boolean?
   mq2Raw              Int
   leakActive          Boolean
   valveState          ValveState
@@ -155,6 +172,10 @@ model CylinderReplacement {
   lastReadingAt      DateTime?
   initialGasKg       Float?
   computedTareKg     Float?
+  baselineBootId     String?
+  baselineSampleSequence Int?
+  measurementBootId String?
+  measurementSampleSequence Int?
 
   @@index([status])
   @@map("cylinder_replacements")
