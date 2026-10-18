@@ -4,7 +4,7 @@ import { LeakRepository } from "../repository/leak.repository.js";
 import { SettingsRepository } from "../repository/settings.repository.js";
 import { StateRepository } from "../repository/state.repository.js";
 import { TelemetryRepository } from "../repository/telemetry.repository.js";
-import type { GasSettings } from "../types/domain.js";
+import type { GasSettingsUpdate } from "../types/domain.js";
 import { calculateConsumption } from "./gas.service.js";
 import { calculateGas } from "./gas.service.js";
 import { CylinderRepository } from "../repository/cylinder.repository.js";
@@ -32,7 +32,7 @@ export class QueryService {
     return this.settingsRepository.get();
   }
 
-  async updateSettings(data: GasSettings) {
+  async updateSettings(data: GasSettingsUpdate) {
     const settings = await this.settingsRepository.update(data);
     const state = await this.stateRepository.get();
     if (state.totalWeightKg !== null) {

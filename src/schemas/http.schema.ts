@@ -6,8 +6,6 @@ export const valveCommandBodySchema = z.object({
 
 export const settingsBodySchema = z
   .object({
-    tareKg: z.number().finite().nonnegative().max(100),
-    capacityKg: z.number().finite().positive().max(100),
     noiseToleranceKg: z.number().finite().positive().max(5).default(0.05),
     refillThresholdKg: z.number().finite().positive().max(20).default(0.5),
   })

@@ -14,6 +14,8 @@ export interface GasSettings {
   refillThresholdKg: number;
 }
 
+export type GasSettingsUpdate = Pick<GasSettings, "noiseToleranceKg" | "refillThresholdKg">;
+
 export interface GasReading {
   receivedAt: Date;
   gasKg: number;

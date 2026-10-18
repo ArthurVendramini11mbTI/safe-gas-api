@@ -1,4 +1,4 @@
-import type { GasSettings } from "../types/domain.js";
+import type { GasSettings, GasSettingsUpdate } from "../types/domain.js";
 import { prisma } from "../lib/prisma.js";
 
 export class SettingsRepository {
@@ -22,13 +22,12 @@ export class SettingsRepository {
     };
   }
 
-  async update(data: GasSettings): Promise<GasSettings> {
-    const state = await prisma.systemState.findUnique({ where: { id: 1 }, select: { activeCylinderId: true } });
-    const cylinderId = state?.activeCylinderId ?? 1;
-    await prisma.$transaction([
-      prisma.systemSettings.upsert({ where: { id: 1 }, create: { id: 1, noiseToleranceKg: data.noiseToleranceKg, refillThresholdKg: data.refillThresholdKg }, update: { noiseToleranceKg: data.noiseToleranceKg, refillThresholdKg: data.refillThresholdKg } }),
-      prisma.gasCylinder.update({ where: { id: cylinderId }, data: { tareKg: data.tareKg, capacityKg: data.capacityKg } }),
-    ]);
+  async update(data: GasSettingsUpdate): Promise<GasSettings> {
+    await prisma.systemSettings.upsert({
+      where: { id: 1 },
+      create: { id: 1, noiseToleranceKg: data.noiseToleranceKg, refillThresholdKg: data.refillThresholdKg },
+      update: { noiseToleranceKg: data.noiseToleranceKg, refillThresholdKg: data.refillThresholdKg },
+    });
     return this.get();
   }
 }

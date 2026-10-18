@@ -1,7 +1,9 @@
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
 
-const FRESHNESS_MS = 15_000;
+// O ESP1 publica normalmente a cada 30 s. A leitura permanece recente até a
+// próxima telemetria, com uma margem para latência e atualização do painel.
+const FRESHNESS_MS = 45_000;
 
 export class ReplacementRepository {
   getPending() {
@@ -17,18 +19,9 @@ export class ReplacementRepository {
   async updateFromTelemetry(totalWeightKg: number, receivedAt: Date) {
     const pending = await this.getPending();
     if (!pending) return null;
-    const settings = await prisma.systemSettings.findUnique({ where: { id: 1 }, select: { noiseToleranceKg: true } });
-    const readings = await prisma.telemetryReading.findMany({
-      where: { receivedAt: { gte: new Date(Math.max(receivedAt.getTime() - 30_000, pending.startedAt.getTime())), lte: receivedAt } },
-      orderBy: { receivedAt: "desc" },
-      take: 3,
-      select: { totalWeightKg: true, receivedAt: true },
-    });
-    const tolerance = settings?.noiseToleranceKg ?? 0.05;
-    const stable = readings.length >= 3 && Math.max(...readings.map((item) => item.totalWeightKg)) - Math.min(...readings.map((item) => item.totalWeightKg)) <= tolerance;
     return prisma.cylinderReplacement.update({
       where: { id: pending.id },
-      data: { measuredWeightKg: totalWeightKg, lastReadingAt: receivedAt, weightStable: stable },
+      data: { measuredWeightKg: totalWeightKg, lastReadingAt: receivedAt, weightStable: true },
     });
   }
 

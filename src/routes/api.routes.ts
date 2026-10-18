@@ -21,7 +21,7 @@ export async function apiRoutes(app: FastifyInstance, controllers: Controllers) 
   app.get("/auth/me", { schema: { tags: ["Autenticação"], summary: "Consulta a sessão atual" } }, controllers.auth.me);
   app.get("/status", { schema: { tags: ["Sistema"], summary: "Situação atual da central" } }, controllers.status.get);
   app.get("/settings", { schema: { tags: ["Sistema"], summary: "Configuração da balança" } }, controllers.status.getSettings);
-  app.put("/settings", { schema: { tags: ["Sistema"], summary: "Atualiza tara e capacidade" } }, controllers.status.updateSettings);
+  app.put("/settings", { schema: { tags: ["Sistema"], summary: "Atualiza tolerância de ruído e limite de reposição" } }, controllers.status.updateSettings);
 
   app.get("/gas/current", { schema: { tags: ["Gás"], summary: "Quantidade atual de gás" } }, controllers.telemetry.current);
   app.get("/gas/history", { schema: { tags: ["Gás"], summary: "Histórico de telemetria" } }, controllers.telemetry.history);

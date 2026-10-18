@@ -31,7 +31,11 @@ import { apiRoutes } from "./routes/api.routes.js";
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
-  await app.register(cors, { origin: config.CORS_ORIGIN === "*" ? true : config.CORS_ORIGIN });
+  await app.register(cors, {
+    origin: config.CORS_ORIGIN === "*" ? true : config.CORS_ORIGIN,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
   await app.register(swagger, { openapi: { info: { title: "Safe Gas API", version: "1.0.0" } } });
   await app.register(swaggerUi, { routePrefix: "/docs" });
 
