@@ -11,7 +11,7 @@ export class TelemetryController {
 
   history = async (request: FastifyRequest, reply: FastifyReply) => {
     const query = historyQuerySchema.parse(request.query);
-    return reply.send(await this.queryService.listTelemetry(query.from, query.to, query.limit, query.cylinderId));
+    return reply.send(await this.queryService.listGasHistory(query.from, query.to, query.limit, query.cylinderId));
   };
 
   consumption = async (request: FastifyRequest, reply: FastifyReply) => {

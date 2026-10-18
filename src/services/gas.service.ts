@@ -19,24 +19,21 @@ export function calculateConsumption(
 ): { totalKg: number; buckets: ConsumptionBucket[] } {
   const totals = new Map<string, number>();
 
-  if (readings.length >= 2) {
-    let reference = readings[0]!.gasKg;
-    let referenceCylinderId = readings[0]!.cylinderId;
-    for (const reading of readings.slice(1)) {
-      if (reading.cylinderId !== undefined && referenceCylinderId !== undefined && reading.cylinderId !== referenceCylinderId) {
-        reference = reading.gasKg;
-        referenceCylinderId = reading.cylinderId;
-        continue;
-      }
-      const increase = reading.gasKg - reference;
-      if (increase >= settings.refillThresholdKg) {
-        // Um ciclo de botijão não é recarregado. Ignore objetos adicionados e
-        // oscilações grandes sem transformar sua retirada posterior em consumo.
-        continue;
-      }
-
+  const grouped = new Map<string, GasReading[]>();
+  for (const reading of readings) {
+    if (!Number.isFinite(reading.gasKg) || Number.isNaN(reading.receivedAt.getTime())) continue;
+    const key = reading.cylinderId === undefined ? "without-cylinder" : String(reading.cylinderId);
+    const group = grouped.get(key) ?? [];
+    group.push(reading);
+    grouped.set(key, group);
+  }
+  for (const group of grouped.values()) {
+    group.sort((a, b) => a.receivedAt.getTime() - b.receivedAt.getTime());
+    if (group.length < 2) continue;
+    let reference = group[0]!.gasKg;
+    for (const reading of group.slice(1)) {
       const decrease = reference - reading.gasKg;
-      if (decrease >= settings.noiseToleranceKg) {
+      if (decrease > 0) {
         const key = bucketStart(reading.receivedAt, range);
         totals.set(key, (totals.get(key) ?? 0) + decrease);
         reference = reading.gasKg;

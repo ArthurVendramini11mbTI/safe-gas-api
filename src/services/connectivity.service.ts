@@ -19,4 +19,8 @@ export class ConnectivityService {
     }
     return false;
   }
+
+  async expireWeightIfStale() {
+    return this.stateRepository.markWeightUnavailableIfStale(new Date(Date.now() - 60_000));
+  }
 }

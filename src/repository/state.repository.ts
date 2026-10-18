@@ -6,14 +6,14 @@ export interface StateTelemetryUpdate {
   valveState: ValveState;
   leakActive: boolean;
   mq2Raw: number;
-  totalWeightKg: number | null;
-  gasKg: number | null;
-  gasPercentage: number | null;
-  weightStatus: WeightStatus;
-  weightBootId: string | null;
-  weightSampleSequence: number | null;
-  weightMeasuredAt: Date | null;
-  cylinderPresent: boolean | null;
+  totalWeightKg?: number | null;
+  gasKg?: number | null;
+  gasPercentage?: number | null;
+  weightStatus?: WeightStatus;
+  weightBootId?: string | null;
+  weightSampleSequence?: number | null;
+  weightMeasuredAt?: Date | null;
+  cylinderPresent?: boolean | null;
   esp2Online: boolean;
 }
 
@@ -48,8 +48,8 @@ export class StateRepository {
   updateConnectivity(deviceOnline: boolean) {
     return prisma.systemState.upsert({
       where: { id: 1 },
-      create: { id: 1, deviceOnline, ...(deviceOnline ? {} : this.unavailableWeight) },
-      update: { deviceOnline, ...(deviceOnline ? {} : this.unavailableWeight) },
+      create: { id: 1, deviceOnline },
+      update: { deviceOnline },
     });
   }
 
@@ -64,15 +64,23 @@ export class StateRepository {
   markOffline() {
     return prisma.systemState.upsert({
       where: { id: 1 },
-      create: { id: 1, deviceOnline: false, esp2Online: false, ...this.unavailableWeight },
-      update: { deviceOnline: false, esp2Online: false, ...this.unavailableWeight },
+      create: { id: 1, deviceOnline: false, esp2Online: false },
+      update: { deviceOnline: false, esp2Online: false },
     });
   }
 
   async markOfflineIfStale(cutoff: Date) {
     const result = await prisma.systemState.updateMany({
       where: { id: 1, deviceOnline: true, OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: cutoff } }] },
-      data: { deviceOnline: false, ...this.unavailableWeight },
+      data: { deviceOnline: false },
+    });
+    return result.count > 0;
+  }
+
+  async markWeightUnavailableIfStale(cutoff: Date) {
+    const result = await prisma.systemState.updateMany({
+      where: { id: 1, weightMeasuredAt: { not: null, lt: cutoff }, weightStatus: { not: "UNAVAILABLE" } },
+      data: { ...this.unavailableWeight },
     });
     return result.count > 0;
   }

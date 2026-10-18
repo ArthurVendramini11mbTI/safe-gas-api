@@ -32,6 +32,14 @@ export class TelemetryRepository {
     return prisma.telemetryReading.findFirst({ where: { cylinderId }, orderBy: { receivedAt: "desc" } });
   }
 
+  latestPresent(cylinderId: number) {
+    return prisma.telemetryReading.findFirst({
+      where: { cylinderId, totalWeightKg: { not: null }, cylinderPresent: true, weightStatus: "VALID" },
+      orderBy: { receivedAt: "desc" },
+      select: { totalWeightKg: true },
+    });
+  }
+
   async list(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
     const rows = await prisma.telemetryReading.findMany({
       where: {
@@ -47,10 +55,29 @@ export class TelemetryRepository {
     return rows.map(serializeReading);
   }
 
+  async listGasHistory(from: Date | undefined, to: Date | undefined, limit: number, cylinderId?: number) {
+    const rows = await prisma.telemetryReading.findMany({
+      where: {
+        receivedAt: {
+          ...(from ? { gte: from } : {}),
+          ...(to ? { lte: to } : {}),
+        },
+        weightStatus: "VALID",
+        cylinderPresent: true,
+        gasKg: { not: null },
+        ...(cylinderId ? { cylinderId } : {}),
+      },
+      orderBy: { receivedAt: "desc" },
+      take: limit,
+    });
+    return rows.map(serializeReading);
+  }
+
   listGasReadings(from: Date, to: Date, cylinderId?: number) {
     return prisma.telemetryReading.findMany({
       where: {
         receivedAt: { gte: from, lte: to },
+        weightStatus: "VALID",
         gasKg: { not: null },
         cylinderPresent: true,
         ...(cylinderId ? { cylinderId } : {}),

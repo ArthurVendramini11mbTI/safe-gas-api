@@ -12,10 +12,7 @@ export interface GasSettings {
   initialWeightKg?: number | null;
   installedAt?: Date | string;
   noiseToleranceKg: number;
-  refillThresholdKg: number;
 }
-
-export type GasSettingsUpdate = Pick<GasSettings, "noiseToleranceKg" | "refillThresholdKg">;
 
 export interface GasReading {
   receivedAt: Date;

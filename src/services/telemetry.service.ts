@@ -25,13 +25,21 @@ export class TelemetryService {
     const cylinderId = await this.cylinderRepository.ensureActive();
     const previousState = await this.stateRepository.get();
     const receivedAt = new Date();
-    const validWeight = input.schemaVersion === 2
+    const rawValidWeight = input.schemaVersion === 2
       && input.weightStatus === "VALID"
       && input.totalWeightKg !== undefined;
-    const totalWeightKg = validWeight ? input.totalWeightKg! : null;
+    const lastPresent = await this.telemetryRepository.latestPresent(cylinderId);
+    const referenceWeight = lastPresent?.totalWeightKg ?? (previousState.cylinderPresent === true ? previousState.totalWeightKg : null);
+    const pending = await this.replacementRepository.getPending();
+    const rawWeight = rawValidWeight ? input.totalWeightKg! : null;
+    const increase = rawWeight !== null && referenceWeight !== null ? rawWeight - referenceWeight : 0;
+    const acceptedWeight = rawValidWeight && (referenceWeight === null ? !pending : increase <= settings.noiseToleranceKg);
+    const normalizedWeight = acceptedWeight
+      ? (referenceWeight !== null && Math.abs(increase) <= settings.noiseToleranceKg ? referenceWeight : rawWeight)
+      : null;
     const minimumPresentWeight = Math.max(0.02, settings.tareKg - settings.noiseToleranceKg);
-    const cylinderPresent = validWeight ? totalWeightKg! >= minimumPresentWeight : null;
-    const calculated = validWeight && cylinderPresent ? calculateGas(totalWeightKg!, settings) : null;
+    const cylinderPresent = acceptedWeight ? normalizedWeight! >= minimumPresentWeight : null;
+    const calculated = acceptedWeight && cylinderPresent ? calculateGas(normalizedWeight!, settings) : null;
     const weightStatus: WeightStatus = input.schemaVersion === 2 ? input.weightStatus : "LEGACY";
     const weightBootId = input.schemaVersion === 2 ? input.weightBootId : null;
     const weightSampleSequence = input.schemaVersion === 2 ? input.weightSampleSequence : null;
@@ -46,29 +54,30 @@ export class TelemetryService {
     const readingData = {
       ...telemetry,
       receivedAt,
-      totalWeightKg,
+      totalWeightKg: acceptedWeight && cylinderPresent ? normalizedWeight : null,
       gasKg: calculated?.gasKg ?? null,
       gasPercentage: calculated?.gasPercentage ?? null,
-      weightStatus,
+      weightStatus: acceptedWeight ? "VALID" : weightStatus,
       weightBootId,
       weightSampleSequence,
       cylinderPresent,
       cylinderId,
     };
     const latestReading = await this.telemetryRepository.latest(cylinderId);
+    const nextWeight = readingData.totalWeightKg;
     const weightChanged = latestReading !== null
-      && latestReading.totalWeightKg !== totalWeightKg
-      && (latestReading.totalWeightKg === null || totalWeightKg === null
-        || Math.abs(latestReading.totalWeightKg - totalWeightKg) >= settings.noiseToleranceKg);
+      && latestReading.totalWeightKg !== nextWeight
+      && (latestReading.totalWeightKg === null || nextWeight === null
+        || Math.abs(latestReading.totalWeightKg - nextWeight) >= settings.noiseToleranceKg);
     const shouldPersist = !latestReading
       || latestReading.weightStatus !== weightStatus
       || latestReading.cylinderPresent !== cylinderPresent
       || weightChanged
       || receivedAt.getTime() - latestReading.receivedAt.getTime() >= 30_000;
     const reading = shouldPersist ? await this.telemetryRepository.create(readingData) : null;
-    const replacementReading = validWeight && totalWeightKg! > 0
+    const replacementReading = rawValidWeight && rawWeight! > 0
       ? await this.replacementRepository.updateFromTelemetry({
-        totalWeightKg: totalWeightKg!,
+        totalWeightKg: rawWeight!,
         receivedAt,
         bootId: weightBootId!,
         sampleSequence: weightSampleSequence!,
@@ -76,14 +85,16 @@ export class TelemetryService {
       : null;
     const state = await this.stateRepository.updateTelemetry({
       ...telemetry,
-      totalWeightKg,
-      gasKg: calculated?.gasKg ?? null,
-      gasPercentage: calculated?.gasPercentage ?? null,
-      weightStatus,
-      weightBootId,
-      weightSampleSequence,
-      weightMeasuredAt: validWeight ? receivedAt : null,
-      cylinderPresent,
+      ...(acceptedWeight ? {
+        totalWeightKg: cylinderPresent ? normalizedWeight : null,
+        gasKg: calculated?.gasKg ?? null,
+        gasPercentage: calculated?.gasPercentage ?? null,
+        weightStatus: "VALID" as const,
+        weightBootId,
+        weightSampleSequence,
+        weightMeasuredAt: receivedAt,
+        cylinderPresent,
+      } : {}),
     });
 
     const openLeak = await this.leakRepository.findOpen();

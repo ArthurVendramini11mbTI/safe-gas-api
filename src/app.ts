@@ -97,6 +97,9 @@ export async function buildApp() {
   const maintenanceTimer = setInterval(() => {
     void commandService.expireCommands();
     void connectivityService.markOfflineIfStale();
+    void connectivityService.expireWeightIfStale().then((expired) => {
+      if (expired) io.emit("telemetry.updated", { weightStatus: "UNAVAILABLE", totalWeightKg: null, gasKg: null, gasPercentage: null, cylinderPresent: null });
+    });
   }, 1000);
   maintenanceTimer.unref();
 

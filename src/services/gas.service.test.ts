@@ -33,6 +33,16 @@ describe("calculateConsumption", () => {
     expect(calculateConsumption(readings, settings, "day").totalKg).toBeCloseTo(0.2);
   });
 
+  it("não mistura leituras intercaladas de ciclos diferentes", () => {
+    const readings = [
+      { gasKg: 10, cylinderId: 1, receivedAt: new Date("2026-10-10T10:00:00.000Z") },
+      { gasKg: 5, cylinderId: 2, receivedAt: new Date("2026-10-10T11:00:00.000Z") },
+      { gasKg: 9.8, cylinderId: 1, receivedAt: new Date("2026-10-10T12:00:00.000Z") },
+      { gasKg: 4.8, cylinderId: 2, receivedAt: new Date("2026-10-10T13:00:00.000Z") },
+    ];
+    expect(calculateConsumption(readings, settings, "day").totalKg).toBeCloseTo(0.4);
+  });
+
   it("retorna zero sem amostras suficientes", () => {
     const result = calculateConsumption([], settings, "week", new Date("2026-10-14T12:00:00.000Z"));
     expect(result.totalKg).toBe(0);

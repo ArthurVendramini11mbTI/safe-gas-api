@@ -12,11 +12,6 @@ async function main() {
     create: { name: "SafeGás", email: "safegas@gmail.com", password: "safegastcc" },
     update: { name: "SafeGás", password: "safegastcc" },
   });
-  await prisma.systemSettings.upsert({
-    where: { id: 1 },
-    create: { id: 1 },
-    update: {},
-  });
   await prisma.telemetryReading.deleteMany();
   await prisma.valveCommand.deleteMany();
   await prisma.leakEvent.deleteMany();
